@@ -1,4 +1,7 @@
 import { authHandler } from "../hooks/auth.js";
+import fastifyMultipart from "@fastify/multipart";
+import { pipeline } from "node:stream/promises";
+import fs from "node:fs";
 
 const creatUserSchema = {
   body: {
@@ -23,6 +26,17 @@ const creatUserSchema = {
 };
 
 async function userRouter(fastify, options) {
+  fastify.register(fastifyMultipart, {
+    limits: {
+      fieldNameSize: 100, // Max field name size in bytes
+      fieldSize: 100, // Max field value size in bytes
+      fields: 10, // Max number of non-file fields
+      fileSize: 1000000, // For multipart forms, the max file size in bytes
+      files: 1, // Max number of file fields
+      headerPairs: 2000, // Max number of header key=>value pairs
+      parts: 1000, // For multipart forms, the max number of parts (fields + files)
+    },
+  });
   fastify.post(
     "/api/users",
     { schema: creatUserSchema },
@@ -114,6 +128,12 @@ async function userRouter(fastify, options) {
     fastify.log.info(`All users ${users}`);
     reply.code(200);
     return users;
+  });
+
+  fastify.post("/api/upload", async (request, reply) => {
+    const data = await request.file();
+    await pipeline(data.file, fs.createWriteStream("static/" + data.filename));
+    reply.send("File uploaded successfully");
   });
 }
 
