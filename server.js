@@ -1,11 +1,22 @@
 import Fastify from "fastify";
+import fastifyMongo from "@fastify/mongodb";
+
+import userRouter from "./src/routes/user.js";
 
 const fastify = Fastify({
   logger: true,
 });
 
-fastify.get("/", function (request, reply) {
-  reply.send({ hello: "world" });
+// db connection
+fastify.register(fastifyMongo, {
+  forceClose: true,
+  url: process.env.MONGODB_URI,
+});
+
+fastify.register(userRouter);
+
+fastify.get("/health", function (request, reply) {
+  reply.send({ message: "Server is up and running" });
 });
 
 const start = async () => {
