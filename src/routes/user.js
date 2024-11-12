@@ -1,3 +1,5 @@
+import { authHandler } from "../hooks/auth.js";
+
 const creatUserSchema = {
   body: {
     type: "object",
@@ -65,24 +67,29 @@ async function userRouter(fastify, options) {
   });
 
   // get simple user by id
-  fastify.get("/api/users/:id", async (request, reply) => {
-    const id = new fastify.mongo.ObjectId(request.params.id);
+  fastify.get(
+    "/api/users/:id",
+    { preHandler: authHandler },
+    async (request, reply) => {
+      console.log("User Handler -->", request.userId);
+      const id = new fastify.mongo.ObjectId(request.params.id);
 
-    const userCollection = fastify.mongo.db.collection("users");
-    const user = await userCollection.findOne({
-      _id: id,
-    });
+      const userCollection = fastify.mongo.db.collection("users");
+      const user = await userCollection.findOne({
+        _id: id,
+      });
 
-    if (!user) {
-      fastify.log.error(`User with id ${id} not found`);
-      reply.code(404);
-      return { message: "User not found" };
+      if (!user) {
+        fastify.log.error(`User with id ${id} not found`);
+        reply.code(404);
+        return { message: "User not found" };
+      }
+
+      fastify.log.info(`User with id ${id} ${user}`);
+      reply.code(200);
+      return user;
     }
-
-    fastify.log.info(`User with id ${id} ${user}`);
-    reply.code(200);
-    return user;
-  });
+  );
 
   fastify.get("/api/users/me", async (request, reply) => {
     const user = request.user;
