@@ -135,6 +135,62 @@ async function userRouter(fastify, options) {
     await pipeline(data.file, fs.createWriteStream("static/" + data.filename));
     reply.send("File uploaded successfully");
   });
+
+  fastify.put("/api/users/:id", async (request, reply) => {
+    const id = new fastify.mongo.ObjectId(request.params.id);
+    const { name, email, password } = request.body;
+    const userCollection = fastify.mongo.db.collection("users");
+    const user = await userCollection.findOne({
+      _id: id,
+    });
+
+    if (!user) {
+      fastify.log.error(`User with id ${id} not found`);
+      reply.code(404);
+      return { message: "User not found" };
+    }
+
+    const updatedUser = await userCollection.updateOne(
+      { _id: id },
+      { $set: { name, email, password } }
+    );
+
+    if (updatedUser.modifiedCount === 1) {
+      fastify.log.info(`User with id ${id} updated successfully`);
+      reply.code(200);
+      return { message: "User updated successfully" };
+    } else {
+      fastify.log.error(`User with id ${id} not updated`);
+      reply.code(400);
+      return { message: "User not updated" };
+    }
+  });
+
+  fastify.delete("/api/users/:id", async (request, reply) => {
+    const id = new fastify.mongo.ObjectId(request.params.id);
+    const userCollection = fastify.mongo.db.collection("users");
+    const user = await userCollection.findOne({
+      _id: id,
+    });
+
+    if (!user) {
+      fastify.log.error(`User with id ${id} not found`);
+      reply.code(404);
+      return { message: "User not found" };
+    }
+
+    const deletedUser = await userCollection.deleteOne({ _id: id });
+
+    if (deletedUser.deletedCount === 1) {
+      fastify.log.info(`User with id ${id} deleted successfully`);
+      reply.code(200);
+      return { message: "User deleted successfully" };
+    } else {
+      fastify.log.error(`User with id ${id} not deleted`);
+      reply.code(400);
+      return { message: "User not deleted" };
+    }
+  });
 }
 
 export default userRouter;
